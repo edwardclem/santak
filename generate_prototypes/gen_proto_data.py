@@ -31,9 +31,9 @@ def gen_contour(img):
     '''
     edges = cv2.Canny(img, img.shape[0], img.shape[1])
     _, cnt, _  = cv2.findContours(edges, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    contour = np.concatenate(cnt)
+    # contour = np.concatenate(cnt)
 
-    return contour
+    return cnt
 
 
 def run(args):

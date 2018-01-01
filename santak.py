@@ -31,7 +31,7 @@
 from PyQt5.QtCore import QDir, QPoint, QRect, QSize, Qt
 from PyQt5.QtGui import QImage, QImageWriter, QPainter, QPen, qRgb, qRgba, QPolygon, QColor, QBrush
 from PyQt5.QtWidgets import (QAction, QApplication, QColorDialog, QFileDialog,
-        QInputDialog, QMainWindow, QMenu, QMessageBox, QWidget, QPushButton)
+        QInputDialog, QMainWindow, QMenu, QMessageBox, QWidget, QPushButton, QProgressBar, QLabel)
 import sys
 import glob
 import os
@@ -39,7 +39,26 @@ import cv2
 import math
 import numpy as np
 from tqdm import tqdm
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 import pickle
+import time
+
+NUM_MAX = 5 #number of highest scoring characters
+
+def subsample_contours(contours, pct=0.3, min_threshold=10):
+    '''
+    Samples subset of contour points.
+    '''
+    subsampled_contours  = []
+    for contour in contours:
+        total_points = contour.shape[0]
+        num_to_sample = int(pct*total_points) if total_points > min_threshold else total_points
+        sample_idx = np.sort(np.random.choice(total_points, num_to_sample, replace=False))
+        subsampled_contours.append(contour[sample_idx,:,:])
+
+    return subsampled_contours
 
 class SantakDrawArea(QWidget):
     def __init__(self, parent=None):
@@ -169,11 +188,28 @@ class SantakMainWindow(QMainWindow):
         with open(protos, 'rb') as f:
             proto_data = pickle.load(f)
             self.id2img = proto_data['id2img']
-            self.id2contour = proto_data['id2contour']
+            self.id2allcontour = proto_data['id2contour']
+            #subsampling contours once, could in theory do this differently every time?
+            #add multiple samples of the same character?
+            #merging together contour here as well
+            self.id2contour = {key:np.concatenate(subsample_contours(contour)) for key, contour in self.id2allcontour.items()}
+
+
             print("loaded {} prototype contours from {}".format(len(self.id2img.keys()), protos))
 
 
         self.sc_extractor = cv2.createShapeContextDistanceExtractor()
+
+        #create progress bar + label
+        self.progress = QProgressBar(self)
+        self.progress.move(75, 250)
+        self.progress.setRange(0, len(self.id2contour.items()))
+
+        self.searchLabel = QLabel("Matching: ", self)
+        self.searchLabel.move(0, 250)
+        # self.progress.setValue(0)
+        # self.progress.setVisible(False)
+        # self.searchLabel.setVisible(False)
 
     def clear_drawing(self):
         self.drawArea.clearImage()
@@ -203,16 +239,45 @@ class SantakMainWindow(QMainWindow):
         #get contour of image
         _, cnt_target, _  = cv2.findContours(edges, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         #concatenate contours
-        #TODO:subsample
-        all_contours_target = np.concatenate(cnt_target)
+        subsampled = subsample_contours(cnt_target)
 
-        distances = {}
-        #TODO: progress bar in UI, as nice as tqdm is
-        for char_id, contour in tqdm(self.id2contour.items()):
-            dist = self.sc_extractor.computeDistance(all_contours_target, contour)
-            distances[char_id] = dist
 
-        print(distances)
+        if len(cnt_target) > 0:
+            # self.progress.setVisible(True)
+            # self.searchLabel.setVisible(True)
+            QApplication.processEvents()
+            all_contours_target = np.concatenate(subsampled)
+
+            distances = {}
+
+            # self.progress.setVisible(True)
+            for i, dat in enumerate(self.id2contour.items()):
+                char_id, contour = dat
+                dist = self.sc_extractor.computeDistance(all_contours_target, contour)
+                distances[char_id] = dist
+                self.progress.setValue(i + 1)
+                QApplication.processEvents()
+
+
+            # self.progress.setVisible(False)
+            # self.searchLabel.setVisible(False)
+            self.progress.reset()
+
+            print(distances)
+            # sorting by distance, displaying top 3
+            ranked_shapes = sorted(distances, key=distances.get)
+
+            print(ranked_shapes)
+
+            closest = ranked_shapes[:NUM_MAX]
+
+            for i, char_num in enumerate(closest):
+                cv2.imshow("{} - {}".format(i + 1, char_num), self.id2img[char_num])
+
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+
 
 
 

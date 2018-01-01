@@ -28,7 +28,8 @@ def parse(args):
 
 
 #renders a character at the given position with the given character size
-def render_char(unicodechar, outfile=None, fig_dim=400, dpi=my_dpi, rotation=0,
+#increasing size to avoid clipping issues
+def render_char(unicodechar, outfile=None, fig_dim=500, dpi=my_dpi, rotation=0,
 							char_size=150, pos=(0.5, 0.5), check_clipping=True):
 	fig, ax = plt.subplots(1, 1, figsize=(fig_dim/dpi, fig_dim/dpi), dpi=dpi)
 	#unpack tuple

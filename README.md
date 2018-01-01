@@ -6,9 +6,11 @@ Drawing-based lookup app for cuneiform characters. Uses [shape context](https://
 
 Requires [OpenCV3](https://opencv.org/about.html) and [PyQT5](http://pyqt.sourceforge.net/Docs/PyQt5/) libraries. Inspired by [ShapeCatcher](http://shapecatcher.com).
 
-#usage
+# usage
 
 Run `python santak.py`
 
-#TODO
-A lot of UI improvements, as well as shorter lookup time. It's a bit slow. But probably faster than looking through a sign list. 
+Edit the santak file to select the prototypes file from data/prototypes.
+
+# TODO
+A lot of UI improvements, as well as shorter lookup time. It's a bit slow. But probably faster than looking through a sign list. Also, including more characters in the prototypes file - with the current formatting a prototype file with all characters is too large. 

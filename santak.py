@@ -29,21 +29,16 @@
 ## $QT_END_LICENSE$
 
 from PyQt5.QtCore import QDir, QPoint, QRect, QSize, Qt
-from PyQt5.QtGui import QImage, QImageWriter, QPainter, QPen, qRgb, qRgba, QPolygon, QColor, QBrush
-from PyQt5.QtWidgets import (QAction, QApplication, QColorDialog, QFileDialog,
-        QInputDialog, QMainWindow, QMenu, QMessageBox, QWidget, QPushButton, QProgressBar, QLabel)
+from PyQt5.QtGui import QImage, QImageWriter, QPainter, QPen, qRgb, qRgba, QPolygon, QColor, QBrush,QPixmap, QIcon
+from PyQt5.QtWidgets import (QAction, QApplication, QMainWindow, QDialog, QWidget, QPushButton, QProgressDialog, QLabel, QTableWidget,QTableWidgetItem, QAbstractItemView)
 import sys
+import unicodedata
 import glob
 import os
 import cv2
 import math
 import numpy as np
-from tqdm import tqdm
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 import pickle
-import time
 
 NUM_MAX = 5 #number of highest scoring characters
 
@@ -60,6 +55,48 @@ def subsample_contours(contours, pct=0.3, min_threshold=10):
 
     return subsampled_contours
 
+class SantakResults(QDialog):
+    '''
+    Modified QDialog containing results.
+    TODO: Redo this whole results display once I figure out data format.
+    '''
+
+    def __init__(self, img_list, char_list, parent=None):
+        super(SantakResults, self).__init__(parent)
+
+        self.resize(260, len(img_list)*100 + 50)
+        self.setFixedSize(260, len(img_list)*100+ 50)
+
+        #add button
+        self.button = QPushButton("OK", self)
+        self.button.clicked.connect(self.accept)
+        self.button.move(0, len(img_list)*100 + 20)
+
+        #table for results
+        self.table = QTableWidget(self)
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.setRowCount(len(img_list))
+        self.table.setColumnCount(2)
+        self.table.setHorizontalHeaderLabels(["Character", "Name"])
+        self.table.verticalHeader().setDefaultSectionSize(100)
+
+        for i, img in enumerate(img_list):
+            # TODO: render the unicode character instead! or something else.
+            #TODO: add sign values
+            # this is all pretty much a gross placeholder
+            height, width, channel = img.shape
+            bytesPerLine = 3 * width
+            qimg = QImage(img.data, width, height, bytesPerLine, QImage.Format_RGB888)
+
+            item = QTableWidgetItem(QIcon(QPixmap(qimg)), "")
+            # item.setIconSize(100, 100)
+            self.table.setItem(i, 0, item)
+            self.table.setItem(i, 1, QTableWidgetItem(unicodedata.name(chr(int(char_list[i])))))
+
+        self.table.setIconSize(QSize(100, 100))
+        self.table.resize(250, len(img_list)*100 + 25)
+
+
 class SantakDrawArea(QWidget):
     def __init__(self, parent=None):
         super(SantakDrawArea, self).__init__(parent)
@@ -71,6 +108,7 @@ class SantakDrawArea(QWidget):
         self.image = QImage()
         self.tempImage = QImage() #for storing wedge mid-draw
         self.wedgeStart = QPoint()
+
 
     def clearImage(self):
         self.image.fill(qRgba(255, 255, 255, 255))
@@ -200,16 +238,6 @@ class SantakMainWindow(QMainWindow):
 
         self.sc_extractor = cv2.createShapeContextDistanceExtractor()
 
-        #create progress bar + label
-        self.progress = QProgressBar(self)
-        self.progress.move(75, 250)
-        self.progress.setRange(0, len(self.id2contour.items()))
-
-        self.searchLabel = QLabel("Matching: ", self)
-        self.searchLabel.move(0, 250)
-        # self.progress.setValue(0)
-        # self.progress.setVisible(False)
-        # self.searchLabel.setVisible(False)
 
     def clear_drawing(self):
         self.drawArea.clearImage()
@@ -241,10 +269,11 @@ class SantakMainWindow(QMainWindow):
         #concatenate contours
         subsampled = subsample_contours(cnt_target)
 
-
         if len(cnt_target) > 0:
-            # self.progress.setVisible(True)
-            # self.searchLabel.setVisible(True)
+            #open pop-up window
+            progress = QProgressDialog("Searching...", "Cancel", 0, len(self.id2contour.keys()), self)
+            progress.setWindowModality(Qt.WindowModal)
+            progress.setAutoClose(True)
             QApplication.processEvents()
             all_contours_target = np.concatenate(subsampled)
 
@@ -255,27 +284,39 @@ class SantakMainWindow(QMainWindow):
                 char_id, contour = dat
                 dist = self.sc_extractor.computeDistance(all_contours_target, contour)
                 distances[char_id] = dist
-                self.progress.setValue(i + 1)
+
+                if progress.wasCanceled():
+                    break;
+
+                progress.setValue(i + 1)
                 QApplication.processEvents()
 
+            if not progress.wasCanceled():
+                ranked_shapes = sorted(distances, key=distances.get)
+                closest = ranked_shapes[:NUM_MAX]
+                #create results dialog
+                results = SantakResults([self.id2img[num] for num in closest], closest, self)
+                results.setWindowModality(Qt.WindowModal) #block until dismissed
+                results.exec()
 
-            # self.progress.setVisible(False)
-            # self.searchLabel.setVisible(False)
-            self.progress.reset()
 
-            print(distances)
-            # sorting by distance, displaying top 3
-            ranked_shapes = sorted(distances, key=distances.get)
 
-            print(ranked_shapes)
+            else:
+                print("empty")
 
-            closest = ranked_shapes[:NUM_MAX]
-
-            for i, char_num in enumerate(closest):
-                cv2.imshow("{} - {}".format(i + 1, char_num), self.id2img[char_num])
-
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            # print(distances)
+            # # sorting by distance, displaying top 3
+            #
+            #
+            # print(ranked_shapes)
+            #
+            # closest = ranked_shapes[:NUM_MAX]
+            #
+            # for i, char_num in enumerate(closest):
+            #     cv2.imshow("{} - {}".format(i + 1, char_num), self.id2img[char_num])
+            #
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
 
 
 

@@ -13,7 +13,7 @@ edges1 = cv2.Canny(img1,300,300)
 
 #now find contours?
 
-_, contours1, _ = cv2.findContours(edges1, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+_, contours1, _ = cv2.findContours(edges1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 # _, contours2, _ = cv2.findContours(edges2, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
 #TODO: subsampling contour points
@@ -22,7 +22,7 @@ _, contours1, _ = cv2.findContours(edges1, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE
 
 SAMPLE_THRESHOLD = 10
 
-SAMPLE_PCT = 0.4
+SAMPLE_PCT = 0.1
 
 subsampled_contours = []
 

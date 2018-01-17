@@ -35,7 +35,6 @@ def gen_contour(img):
 
     return cnt
 
-
 def run(args):
 
     char_ids, imgs = load_imgs(args.imgs)

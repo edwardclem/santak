@@ -31,6 +31,7 @@
 from PyQt5.QtCore import QDir, QPoint, QRect, QSize, Qt
 from PyQt5.QtGui import QImage, QImageWriter, QPainter, QPen, qRgb, qRgba, QPolygon, QColor, QBrush,QPixmap, QIcon
 from PyQt5.QtWidgets import (QAction, QApplication, QMainWindow, QDialog, QWidget, QPushButton, QProgressDialog, QLabel, QTableWidget,QTableWidgetItem, QAbstractItemView)
+from multiprocessing import Pool
 import sys
 import unicodedata
 import glob
@@ -42,7 +43,7 @@ import pickle
 
 NUM_MAX = 5 #number of highest scoring characters
 
-def subsample_contours(contours, pct=0.3, min_threshold=10):
+def subsample_contours(contours, pct=0.2, min_threshold=10):
     '''
     Samples subset of contour points.
     '''
@@ -54,6 +55,21 @@ def subsample_contours(contours, pct=0.3, min_threshold=10):
         subsampled_contours.append(contour[sample_idx,:,:])
 
     return subsampled_contours
+
+def reduce_contours(contours, step=6):
+    '''
+    keeps every step points, removes the rest. Alternative to probabilistic subsampling.
+    TODO: do this on data processing instead of after loading.
+    TODO: add min threshold?
+    '''
+
+    reduced_contours = []
+    for contour in contours:
+        total_points = contour.shape[0]
+        kept_idx = np.arange(0, total_points, step)
+        reduced_contours.append(contour[kept_idx, :, :])
+
+    return reduced_contours
 
 class SantakResults(QDialog):
     '''
@@ -87,10 +103,8 @@ class SantakResults(QDialog):
             height, width, channel = img.shape
             bytesPerLine = 3 * width
             qimg = QImage(img.data, width, height, bytesPerLine, QImage.Format_RGB888)
-
-            item = QTableWidgetItem(QIcon(QPixmap(qimg)), "")
             # item.setIconSize(100, 100)
-            self.table.setItem(i, 0, item)
+            self.table.setItem(i, 0, QTableWidgetItem(QIcon(QPixmap(qimg)), ""))
             self.table.setItem(i, 1, QTableWidgetItem(unicodedata.name(chr(int(char_list[i])))))
 
         self.table.setIconSize(QSize(100, 100))
@@ -170,6 +184,8 @@ class SantakDrawArea(QWidget):
         if (event.buttons() & Qt.LeftButton) and self.drawing:
             self.clearTemp()
             self.drawWedgeTo(event.pos(), temp=True)
+        #TODO: if not drawing, add a grey temporary indicator of what kind/size
+        #of wedge is being drawn
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and self.drawing:
@@ -230,7 +246,7 @@ class SantakMainWindow(QMainWindow):
             #subsampling contours once, could in theory do this differently every time?
             #add multiple samples of the same character?
             #merging together contour here as well
-            self.id2contour = {key:np.concatenate(subsample_contours(contour)) for key, contour in self.id2allcontour.items()}
+            self.id2contour = {key:np.concatenate(reduce_contours(contour)) for key, contour in self.id2allcontour.items()}
 
 
             print("loaded {} prototype contours from {}".format(len(self.id2img.keys()), protos))
@@ -267,7 +283,7 @@ class SantakMainWindow(QMainWindow):
         #get contour of image
         _, cnt_target, _  = cv2.findContours(edges, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         #concatenate contours
-        subsampled = subsample_contours(cnt_target)
+        subsampled = reduce_contours(cnt_target)
 
         if len(cnt_target) > 0:
             #open pop-up window
@@ -276,14 +292,12 @@ class SantakMainWindow(QMainWindow):
             progress.setAutoClose(True)
             QApplication.processEvents()
             all_contours_target = np.concatenate(subsampled)
-
             distances = {}
 
             # self.progress.setVisible(True)
             for i, dat in enumerate(self.id2contour.items()):
                 char_id, contour = dat
-                dist = self.sc_extractor.computeDistance(all_contours_target, contour)
-                distances[char_id] = dist
+                distances[char_id] = self.sc_extractor.computeDistance(all_contours_target, contour)
 
                 if progress.wasCanceled():
                     break;
@@ -298,8 +312,6 @@ class SantakMainWindow(QMainWindow):
                 results = SantakResults([self.id2img[num] for num in closest], closest, self)
                 results.setWindowModality(Qt.WindowModal) #block until dismissed
                 results.exec()
-
-
 
             else:
                 print("empty")

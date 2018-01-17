@@ -30,7 +30,7 @@
 
 from PyQt5.QtCore import QDir, QPoint, QRect, QSize, Qt
 from PyQt5.QtGui import QImage, QImageWriter, QPainter, QPen, qRgb, qRgba, QPolygon, QColor, QBrush,QPixmap, QIcon
-from PyQt5.QtWidgets import (QAction, QApplication, QMainWindow, QDialog, QWidget, QPushButton, QProgressDialog, QLabel, QTableWidget,QTableWidgetItem, QAbstractItemView)
+from PyQt5.QtWidgets import (QAction, QApplication, QMainWindow, QDialog, QWidget, QPushButton, QProgressDialog, QLabel, QTableWidget,QTableWidgetItem, QAbstractItemView, QRadioButton)
 from multiprocessing import Pool
 import sys
 import unicodedata
@@ -135,21 +135,29 @@ class SantakDrawArea(QWidget):
         self.tempImage.fill(qRgba(0, 0, 0, 0))
         self.update()
 
-    def drawWedgeTo(self, endLoc, temp=False):
+    def drawWinkelhaken(self, loc, temp=False):
+        '''
+        draws a winkelhaken at the provided location.
+        '''
+        painter = QPainter(self.image) if not temp else QPainter(self.tempImage)
+        #TODO this thingy
+
+    def drawWedgeTo(self, endLoc, temp=False, width=10, offset=30):
         '''
         Draws a wedge at the provided location.
+        TODO: make size params better.
         '''
 
         # print(self.image.isNull())
 
         painter = QPainter(self.image) if not temp else QPainter(self.tempImage)
 
-        painter.setPen(QPen(QColor(0,0,0, 255), 10))
+        painter.setPen(QPen(QColor(0,0,0, 255), width))
         painter.setBrush(QBrush(QColor(255,255,255,255)))
 
-        point1 = QPoint(-30, - 30)
-        point2 = QPoint(30,  - 30)
-        point3 = QPoint(0, 15)
+        point1 = QPoint(-offset, - offset)
+        point2 = QPoint(offset,  - offset)
+        point3 = QPoint(0, offset/2)
 
         poly = QPolygon([point1, point2, point3])
         #compute vector from points
@@ -183,14 +191,20 @@ class SantakDrawArea(QWidget):
     def mouseMoveEvent(self, event):
         if (event.buttons() & Qt.LeftButton) and self.drawing:
             self.clearTemp()
-            self.drawWedgeTo(event.pos(), temp=True)
+            if self.parent().current_sym == "BW":
+                self.drawWedgeTo(event.pos(), temp=True)
+            elif self.parent().current_sym == "SW":
+                self.drawWedgeTo(event.pos(), temp=True, width=5, offset=15)
         #TODO: if not drawing, add a grey temporary indicator of what kind/size
         #of wedge is being drawn
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and self.drawing:
             self.clearTemp()
-            self.drawWedgeTo(event.pos())
+            if self.parent().current_sym == "BW":
+                self.drawWedgeTo(event.pos())
+            elif self.parent().current_sym == "SW":
+                self.drawWedgeTo(event.pos(), width=5, offset=15)
             self.drawing = False
 
     def resizeImage(self, image, newSize):
@@ -238,6 +252,28 @@ class SantakMainWindow(QMainWindow):
         search_button.move(100, 270)
         search_button.clicked.connect(self.lookup)
 
+        #create drawing symbol switching
+        #TODO: replace this with enum
+        self.current_sym = "BW"
+
+        big_wedge_button = QRadioButton("big wedge", self)
+        big_wedge_button.move(200, 220)
+        big_wedge_button.setChecked(True)
+        big_wedge_button.setObjectName("BW")
+        big_wedge_button.clicked.connect(self.switch_symbol)
+
+
+        small_wedge_button = QRadioButton("small wedge", self)
+        small_wedge_button.setObjectName("SW")
+        small_wedge_button.move(200, 240)
+        small_wedge_button.clicked.connect(self.switch_symbol)
+
+
+        winkelbutton = QRadioButton("winkelhaken", self)
+        winkelbutton.setObjectName("WK")
+        winkelbutton.clicked.connect(self.switch_symbol)
+        winkelbutton.move(200, 260)
+
         #loading prototype data from pickle
         with open(protos, 'rb') as f:
             proto_data = pickle.load(f)
@@ -257,6 +293,13 @@ class SantakMainWindow(QMainWindow):
 
     def clear_drawing(self):
         self.drawArea.clearImage()
+
+
+    def switch_symbol(self):
+        '''
+        Switches the symbol currently being drawn.
+        '''
+        self.current_sym = self.sender().objectName()
 
     def getimg(self):
         '''
@@ -315,23 +358,6 @@ class SantakMainWindow(QMainWindow):
 
             else:
                 print("empty")
-
-            # print(distances)
-            # # sorting by distance, displaying top 3
-            #
-            #
-            # print(ranked_shapes)
-            #
-            # closest = ranked_shapes[:NUM_MAX]
-            #
-            # for i, char_num in enumerate(closest):
-            #     cv2.imshow("{} - {}".format(i + 1, char_num), self.id2img[char_num])
-            #
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
-
-
-
 
 
 if __name__ == '__main__':

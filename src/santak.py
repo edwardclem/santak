@@ -32,7 +32,7 @@
 
 from PyQt5.QtWidgets import QApplication
 import sys
-from SantakMainWindow import SantakMainWindow
+from ui.SantakMainWindow import SantakMainWindow
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

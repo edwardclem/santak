@@ -19,7 +19,8 @@ class SantakDrawArea(QWidget):
         self.setAttribute(Qt.WA_StaticContents)
         self.drawing = False
         self.myPenWidth = 1
-        self.charColor = Qt.black
+        self.finalColor = Qt.black
+        self.tempColor = Qt.gray
         self.image = QImage()
         self.tempImage = QImage() #for storing wedge mid-draw
         self.wedgeStart = QPoint()
@@ -36,24 +37,46 @@ class SantakDrawArea(QWidget):
         self.tempImage.fill(qRgba(0, 0, 0, 0))
         self.update()
 
-    def drawWinkelhaken(self, loc, temp=False):
+    def drawWinkelhaken(self, loc, temp=False, width=10, offset=20):
         '''
         draws a winkelhaken at the provided location.
+        TODO: refactor this probably, no need for "temp" flag and switching image
         '''
         painter = QPainter(self.image) if not temp else QPainter(self.tempImage)
-        #TODO this thingy
 
-    def drawWedgeTo(self, endLoc, temp=False, width=10, offset=30):
+
+        color = self.tempColor if temp else self.finalColor
+
+        painter.setPen(QPen(color, width))
+        painter.setBrush(QBrush(QColor(255,255,255,255)))
+
+        point1 = QPoint(offset/2, offset)
+        point2 = QPoint(offset/2, -offset)
+        point3 = QPoint(-offset/2, 0)
+
+        poly = QPolygon([point1, point2, point3])
+        painter.translate(loc)
+        painter.drawPolygon(poly)
+
+
+
+        self.update()
+
+    def drawWedgeTo(self, startLoc, endLoc, temp=False, width=10, offset=30):
         '''
         Draws a wedge at the provided location.
         TODO: make size params better.
+        TODO: separate wedgeStart parame
         '''
 
         # print(self.image.isNull())
 
         painter = QPainter(self.image) if not temp else QPainter(self.tempImage)
 
-        painter.setPen(QPen(QColor(0,0,0, 255), width))
+
+        color = self.tempColor if temp else self.finalColor
+
+        painter.setPen(QPen(color, width))
         painter.setBrush(QBrush(QColor(255,255,255,255)))
 
         point1 = QPoint(-offset, - offset)
@@ -66,7 +89,7 @@ class SantakDrawArea(QWidget):
         length = math.hypot(vec.x(), vec.y())
         angle = math.degrees(math.atan2(vec.x(), vec.y()))
         #transform painter
-        painter.translate(self.wedgeStart)
+        painter.translate(startLoc)
         painter.rotate(-angle)
         painter.drawPolygon(poly)
 
@@ -93,9 +116,11 @@ class SantakDrawArea(QWidget):
         if (event.buttons() & Qt.LeftButton) and self.drawing:
             self.clearTemp()
             if self.parent().current_sym == "BW":
-                self.drawWedgeTo(event.pos(), temp=True)
+                self.drawWedgeTo(self.wedgeStart, event.pos(), temp=True)
             elif self.parent().current_sym == "SW":
-                self.drawWedgeTo(event.pos(), temp=True, width=5, offset=15)
+                self.drawWedgeTo(self.wedgeStart, event.pos(), temp=True, width=5, offset=15)
+            elif self.parent().current_sym == "WK":
+                self.drawWinkelhaken(event.pos(), temp=True)
         #TODO: if not drawing, add a grey temporary indicator of what kind/size
         #of wedge is being drawn
 
@@ -103,9 +128,11 @@ class SantakDrawArea(QWidget):
         if event.button() == Qt.LeftButton and self.drawing:
             self.clearTemp()
             if self.parent().current_sym == "BW":
-                self.drawWedgeTo(event.pos())
+                self.drawWedgeTo(self.wedgeStart, event.pos())
             elif self.parent().current_sym == "SW":
-                self.drawWedgeTo(event.pos(), width=5, offset=15)
+                self.drawWedgeTo(self.wedgeStart, event.pos(), width=5, offset=15)
+            elif self.parent().current_sym == "WK":
+                self.drawWinkelhaken(event.pos())
             self.drawing = False
 
     def resizeImage(self, image, newSize):

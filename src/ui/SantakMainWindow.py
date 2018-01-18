@@ -11,8 +11,8 @@ import cv2
 import math
 import numpy as np
 import pickle
-from SantakDrawArea import SantakDrawArea
-from SantakResults import SantakResults
+from ui.SantakDrawArea import SantakDrawArea
+from ui.SantakResults import SantakResults
 
 NUM_MAX = 5 #number of highest scoring characters
 
@@ -135,7 +135,7 @@ class SantakMainWindow(QMainWindow):
     def lookup(self):
         '''
         Shape context character matching.
-        TODO: move this?
+        TODO: move this to inference package
         '''
         img = self.getimg()[0:300, 0:300] #crop to 300x300
         #perform Canny edge detection

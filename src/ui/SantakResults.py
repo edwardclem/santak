@@ -12,7 +12,6 @@ import math
 import numpy as np
 import pickle
 
-
 class SantakResults(QDialog):
     '''
     Modified QDialog containing results.

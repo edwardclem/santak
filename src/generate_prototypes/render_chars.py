@@ -88,7 +88,7 @@ def run(args):
 	#create outfolder if not present
 	pathlib.Path(args.outf).mkdir(exist_ok=True)
 
-	for i in range(start_int, args.max_code):
+	for i in range(start_int, args.max_code + 1):
 		uchar = chr(i)
 		render_char(uchar, '{}/{}.png'.format(args.outf, i))
 

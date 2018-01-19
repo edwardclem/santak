@@ -36,7 +36,6 @@ def reduce_contours(contours, step=6):
     TODO: do this on data processing instead of after loading.
     TODO: add min threshold?
     '''
-
     reduced_contours = []
     for contour in contours:
         total_points = contour.shape[0]
@@ -95,11 +94,10 @@ class SantakMainWindow(QMainWindow):
             proto_data = pickle.load(f)
             self.id2img = proto_data['id2img']
             self.id2allcontour = proto_data['id2contour']
-            #subsampling contours once, could in theory do this differently every time?
             #add multiple samples of the same character?
             #merging together contour here as well
-            self.id2contour = {key:np.concatenate(reduce_contours(contour)) for key, contour in self.id2allcontour.items()}
-
+            #not subsampling or reducing, already done by data processing
+            self.id2contour = {key:np.concatenate(contour) for key, contour in self.id2allcontour.items()}
 
             print("loaded {} prototype contours from {}".format(len(self.id2img.keys()), protos))
 
@@ -157,6 +155,7 @@ class SantakMainWindow(QMainWindow):
             # self.progress.setVisible(True)
             for i, dat in enumerate(self.id2contour.items()):
                 char_id, contour = dat
+                # print("comparing to {}, number of contours: {}".format(char_id, len(contour)))
                 distances[char_id] = self.sc_extractor.computeDistance(all_contours_target, contour)
 
                 if progress.wasCanceled():

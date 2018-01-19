@@ -12,9 +12,24 @@ import os
 def parse(args):
     parser = ArgumentParser()
     parser.add_argument("--imgs", help="folder with location of rendered images")
+    parser.add_argument("--skip", help="skipping interval", type=int)
     parser.add_argument("--out", help="location of output pickle file")
     return parser.parse_args(args)
 
+
+def reduce_contours(contours, step=6):
+    '''
+    keeps every step points, removes the rest. Alternative to probabilistic subsampling.
+    TODO: do this on data processing instead of after loading.
+    TODO: add min threshold?
+    '''
+    reduced_contours = []
+    for contour in contours:
+        total_points = contour.shape[0]
+        kept_idx = np.arange(0, total_points, step)
+        reduced_contours.append(contour[kept_idx, :, :])
+
+    return reduced_contours
 
 def load_imgs(folder):
     print("loading prototypes from {}".format(folder))
@@ -40,6 +55,9 @@ def run(args):
     char_ids, imgs = load_imgs(args.imgs)
 
     contours = [gen_contour(img) for img in imgs]
+
+    #reduce all_contours_target
+    contours = [reduce_contours(contour, step=args.skip) for contour in contours]
 
     #saves as pickle file
     id2img = {char_id:img for char_id, img in zip(char_ids, imgs)}

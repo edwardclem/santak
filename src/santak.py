@@ -36,7 +36,7 @@ from ui.SantakMainWindow import SantakMainWindow
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    proto = "data/prototypes/proto_all.pkl"
+    proto = "data/prototypes/skip_10/proto_50.pkl"
     window = SantakMainWindow(proto)
     window.show()
     sys.exit(app.exec_())

@@ -13,6 +13,8 @@ import numpy as np
 import pickle
 from ui.SantakDrawArea import SantakDrawArea
 from ui.SantakResults import SantakResults
+import multiprocessing as mp
+from ui.sc_inference.compute_dist import *
 
 NUM_MAX = 5 #number of highest scoring characters
 
@@ -30,7 +32,7 @@ def subsample_contours(contours, pct=0.2, min_threshold=10):
 
     return subsampled_contours
 
-def reduce_contours(contours, step=6):
+def reduce_contours(contours, step=10):
     '''
     keeps every step points, removes the rest. Alternative to probabilistic subsampling.
     TODO: do this on data processing instead of after loading.
@@ -65,7 +67,7 @@ class SantakMainWindow(QMainWindow):
 
         search_button = QPushButton("Search", self)
         search_button.move(100, 270)
-        search_button.clicked.connect(self.lookup)
+        search_button.clicked.connect(self.lookup_parallel)
 
         #create drawing symbol switching
         #TODO: replace this with enum
@@ -129,6 +131,76 @@ class SantakMainWindow(QMainWindow):
 
         return arr
 
+    def get_contour(self):
+        '''
+        Gets the current contour on the screen. concatenates all contours together.
+        '''
+
+        img = self.getimg()[0:300, 0:300] #crop to 300x300
+        #perform Canny edge detection
+        edges = cv2.Canny(img, 300, 300)
+        #get contour of image
+        _, cnt_target, _  = cv2.findContours(edges, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+        #concatenate contours
+        subsampled = reduce_contours(cnt_target)
+
+        return np.concatenate(subsampled)
+
+    def lookup_parallel(self):
+        '''
+        shape context character matching parallelized.
+        TODO: refactor this.
+        '''
+
+        target = self.get_contour()
+
+        if len(target) > 0:
+            progress = QProgressDialog("Searching...", "Cancel", 0, len(self.id2contour.keys()), self)
+            progress.setWindowModality(Qt.WindowModal)
+            progress.setAutoClose(True)
+            QApplication.processEvents()
+
+            #create batches.
+
+            batches = create_batches(self.id2contour)
+
+            #create output queue
+            outq = mp.Queue()
+
+            #create processes
+            procs = [mp.Process(target=process_batch, args=(target, batch, outq)) for batch in batches]
+
+            for proc in procs:
+                proc.start()
+            print("started processes")
+            results = {}
+
+            #wait for all data to come in from queue, update progress bar
+            for i, _ in enumerate(self.id2contour.items()):
+                char_id, dist = outq.get(True) #block until something apppears
+                results[char_id] = dist
+                if progress.wasCanceled():
+                    break;
+
+                progress.setValue(i + 1)
+                QApplication.processEvents()
+
+            if progress.wasCanceled():
+                #kill all threads
+                print("terminating processes")
+                for proc in procs:
+                    proc.terminate()
+            else:
+                print("waiting for join to complete")
+                for proc in procs:
+                    proc.join()
+                #display results
+                ranked_shapes = sorted(results, key=results.get)
+                closest = ranked_shapes[:NUM_MAX]
+                #create results dialog
+                results = SantakResults([self.id2img[num] for num in closest], closest, self)
+                results.setWindowModality(Qt.WindowModal) #block until dismissed
+                results.exec()
 
     def lookup(self):
         '''

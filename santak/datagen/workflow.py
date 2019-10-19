@@ -5,7 +5,6 @@ from pathlib import Path
 from tqdm import tqdm
 import cv2
 import pickle
-import numpy as np
 from santak.vision import reduce_contours
 
 

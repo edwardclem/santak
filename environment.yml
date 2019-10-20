@@ -4,6 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - pyqt
+  - qt
   - python=3.7
   - numpy
   - opencv

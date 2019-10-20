@@ -8,15 +8,19 @@ Inspired by [ShapeCatcher](http://shapecatcher.com).
 
 # setup/installation
 
-run `conda env create -f environment.yml`
+All dependencies can be handled by the [Conda](https://docs.conda.io/en/latest/miniconda.html) package manager. Install Conda, then run:  `conda env create -f environment.yml`
+
+To use the prototype generation workflow below, run `pip install -e .` from within the directory.
 
 # Prototype generation
 
-TODO
+Prototype images for shape matching are created using the [Luigi](http://luigi.readthedocs.io) workflow found in `santak/datagen` that renders characters in the Cuneiform unicode code block and produces contours using a Canny edge filter. See `scripts/aggregate.sh` for a usage example. 
 
 # Usage
 
 Run `./santakgui -p <prototyes file>`
 
 # TODO
-A lot of UI improvements, as well as shorter lookup time. It's a bit slow. But probably faster than looking through a sign list. Also, including more characters in the prototypes file - with the current formatting a prototype file with all characters is too large.
+    - UI Improvements
+    - Speed/parallelization
+    - Catching OpenCV errors

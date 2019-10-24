@@ -23,4 +23,3 @@ Run `./santakgui -p <prototyes file>`
 # TODO
     - UI Improvements
     - Speed/parallelization
-    - Catching OpenCV errors

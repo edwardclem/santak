@@ -62,7 +62,6 @@ class SantakMainWindow(QMainWindow):
         winkelbutton.move(200, 260)
 
         # loading prototype data from pickle
-        # TODO: only do this once? Why am I doing it twice?
         with open(protos, "rb") as f:
             proto_data = pickle.load(f)
             self.id2img = proto_data["id2img"]
@@ -71,7 +70,7 @@ class SantakMainWindow(QMainWindow):
             # add multiple samples of the same character?
             # merging together contour here as well
             self.id2contour = {
-                key: np.concatenate(contour)
+                key: np.concatenate(reduce_contours(contour))
                 for key, contour in self.id2allcontour.items()
             }
 
@@ -140,9 +139,16 @@ class SantakMainWindow(QMainWindow):
             # TODO: abstract this part out along with the progress bar(s)
             for i, dat in enumerate(tqdm(self.id2contour.items())):
                 char_id, contour = dat
-                distances[char_id] = self.sc_extractor.computeDistance(
-                    all_contours_target, contour
-                )
+
+                try:
+                    dist = self.sc_extractor.computeDistance(
+                        all_contours_target, contour
+                    )
+                except cv2.error as e:
+                    print("WARNING: character ID {} suffered error".format(char_id))
+                    dist = 1
+
+                distances[char_id] = dist
 
                 if progress.wasCanceled():
                     print("CANCELED")

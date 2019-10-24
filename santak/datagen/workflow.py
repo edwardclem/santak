@@ -59,7 +59,7 @@ class GenerateContoursForCodeRange(luigi.Task):
     end_code_point = luigi.IntParameter()
     font_path = luigi.Parameter()
     dpi = luigi.IntParameter(default=96)
-    img_size = luigi.IntParameter(default=400)
+    img_size = luigi.IntParameter(default=300)
     font_size = luigi.IntParameter(default=150)
     keep_every = luigi.IntParameter(default=5)  # removing every nth contour point
 

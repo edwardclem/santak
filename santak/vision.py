@@ -21,16 +21,18 @@ def subsample_contours(contours, pct=0.2, min_threshold=10):
     return subsampled_contours
 
 
-def reduce_contours(contours, step=6):
+def reduce_contours(contours, step=6, min_points=5):
     """
     keeps every step points, removes the rest. Alternative to probabilistic subsampling.
-    TODO: add min threshold? i suspect that the abort trap present in the search function is due to too few points.
     """
 
     reduced_contours = []
     for contour in contours:
         total_points = contour.shape[0]
         kept_idx = np.arange(0, total_points, step)
-        reduced_contours.append(contour[kept_idx, :, :])
+        if len(kept_idx) > min_points:
+            reduced_contours.append(contour[kept_idx, :, :])
+        else:
+            reduced_contours.append(contour)
 
     return reduced_contours

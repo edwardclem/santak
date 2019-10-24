@@ -144,11 +144,9 @@ class SantakMainWindow(QMainWindow):
                     dist = self.sc_extractor.computeDistance(
                         all_contours_target, contour
                     )
+                    distances[char_id] = dist
                 except cv2.error as e:
                     print("WARNING: character ID {} suffered error".format(char_id))
-                    dist = 1
-
-                distances[char_id] = dist
 
                 if progress.wasCanceled():
                     print("CANCELED")

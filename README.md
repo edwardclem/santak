@@ -3,14 +3,23 @@
 santak; noun. "cuneiform wedge", Foxvog 2016.
 
 Drawing-based lookup app for cuneiform characters. Uses [shape context](https://www2.eecs.berkeley.edu/Research/Projects/CS/vision/shape/belongie-pami02.pdf) matching to compute distance between drawn images and reference characters. Reference characters from CuneiformComposite font, provided by the Unicode consortium.
+ 
+Inspired by [ShapeCatcher](http://shapecatcher.com).
 
-Requires [OpenCV3](https://opencv.org/about.html) and [PyQT5](http://pyqt.sourceforge.net/Docs/PyQt5/) libraries. Inspired by [ShapeCatcher](http://shapecatcher.com).
+# setup/installation
 
-# usage
+All dependencies can be handled by the [Conda](https://docs.conda.io/en/latest/miniconda.html) package manager. Install Conda, then run:  `conda env create -f environment.yml`
 
-Run `python santak.py`
+To use the prototype generation workflow below, run `pip install -e .` from within the directory.
 
-Edit the santak file to select the prototypes file from data/prototypes.
+# Prototype generation
+
+Prototype images for shape matching are created using the [Luigi](http://luigi.readthedocs.io) workflow found in `santak/datagen` that renders characters in the Cuneiform unicode code block and produces contours using a Canny edge filter. See `scripts/aggregate.sh` for a usage example. 
+
+# Usage
+
+Run `./santakgui -p <prototyes file>`
 
 # TODO
-A lot of UI improvements, as well as shorter lookup time. It's a bit slow. But probably faster than looking through a sign list. Also, including more characters in the prototypes file - with the current formatting a prototype file with all characters is too large. 
+    - UI Improvements
+    - Speed/parallelization

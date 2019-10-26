@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 ## $QT_BEGIN_LICENSE:BSD$
 ## You may use this file under the terms of the BSD license as follows:
 ##
@@ -28,15 +30,26 @@
 ## OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
 ## $QT_END_LICENSE$
 
-#TODO: update documentation and fix import block
+# TODO: update documentation and fix import block
 
 from PyQt5.QtWidgets import QApplication
 import sys
-from SantakMainWindow import SantakMainWindow
+from santak.gui import SantakMainWindow
+from argparse import ArgumentParser
 
-if __name__ == '__main__':
+
+def parse_args(args):
+    parser = ArgumentParser()
+    parser.add_argument("-p", help="prototypes file", required=True)
+    return parser.parse_args(args)
+
+
+def run(args):
     app = QApplication(sys.argv)
-    proto = "data/prototypes/proto_20"
-    window = SantakMainWindow(proto)
+    window = SantakMainWindow(args.p)
     window.show()
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    run(parse_args(sys.argv[1:]))
